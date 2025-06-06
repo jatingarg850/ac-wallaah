@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import ACDetailCard from './acDetailCard';
 import NewAcForm from './newAcForm';
 import '../../../src/index.css';
+import { api } from '../../api/config';
 
 const MainArea = () => {
     const [activeTab, setActiveTab] = useState('listedAC');
     const [listings, setListings] = useState([]);
     const [myListings, setMyListings] = useState([]);
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     // Helper function to get user ID from token
     const getUserIdFromToken = (token) => {
@@ -24,25 +26,29 @@ const MainArea = () => {
 
     // Fetch all AC listings
     const fetchListings = async () => {
+        setLoading(true);
+        setError('');
         try {
-            const response = await fetch('http://localhost:5000/api/ac-listings');
-            const data = await response.json();
-            if (response.ok) {
-                setListings(data);
-            } else {
-                setError('Failed to fetch AC listings');
-            }
+            const data = await api.get('/api/ac-listings');
+            setListings(data);
         } catch (error) {
             console.error('Fetch listings error:', error);
-            setError('Failed to connect to server');
+            setError('Failed to fetch listings. Please try again later.');
+        } finally {
+            setLoading(false);
         }
     };
 
     // Fetch user's AC listings
     const fetchMyListings = async () => {
+        setLoading(true);
+        setError('');
         try {
             const token = localStorage.getItem('token');
-            if (!token) return;
+            if (!token) {
+                setError('Please login to view your listings');
+                return;
+            }
 
             const userId = getUserIdFromToken(token);
             if (!userId) {
@@ -50,20 +56,17 @@ const MainArea = () => {
                 return;
             }
 
-            const response = await fetch(`http://localhost:5000/api/ac-listings/user/${userId}`, {
+            const data = await api.get(`/api/ac-listings/user/${userId}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
-            const data = await response.json();
-            if (response.ok) {
-                setMyListings(data);
-            } else {
-                setError('Failed to fetch your AC listings');
-            }
+            setMyListings(data);
         } catch (error) {
             console.error('Fetch my listings error:', error);
-            setError('Failed to connect to server');
+            setError('Failed to fetch your listings. Please try again later.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -102,36 +105,44 @@ const MainArea = () => {
                     </div>
                 )}
                 
-                {activeTab === 'listedAC' && (
-                    <div>
-                        {listings.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '2rem' }}>
-                                No AC listings available
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: '2rem' }}>
+                        Loading...
+                    </div>
+                ) : (
+                    <>
+                        {activeTab === 'listedAC' && (
+                            <div>
+                                {listings.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '2rem' }}>
+                                        No AC listings available
+                                    </div>
+                                ) : (
+                                    listings.map(listing => (
+                                        <ACDetailCard key={listing.id} listing={listing} />
+                                    ))
+                                )}
                             </div>
-                        ) : (
-                            listings.map(listing => (
-                                <ACDetailCard key={listing.id} listing={listing} />
-                            ))
                         )}
-                    </div>
-                )}
 
-                {activeTab === 'myListedAC' && (
-                    <div>
-                        <NewAcForm onSubmitSuccess={fetchMyListings} />
-                        <div style={{ marginTop: '2rem' }}>
-                            <h2>Your Listed ACs</h2>
-                            {myListings.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '2rem' }}>
-                                    You haven't listed any ACs yet
+                        {activeTab === 'myListedAC' && (
+                            <div>
+                                <NewAcForm onSubmitSuccess={fetchMyListings} />
+                                <div style={{ marginTop: '2rem' }}>
+                                    <h2>Your Listed ACs</h2>
+                                    {myListings.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '2rem' }}>
+                                            You haven't listed any ACs yet
+                                        </div>
+                                    ) : (
+                                        myListings.map(listing => (
+                                            <ACDetailCard key={listing.id} listing={listing} isOwner={true} />
+                                        ))
+                                    )}
                                 </div>
-                            ) : (
-                                myListings.map(listing => (
-                                    <ACDetailCard key={listing.id} listing={listing} isOwner={true} />
-                                ))
-                            )}
-                        </div>
-                    </div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </div>
