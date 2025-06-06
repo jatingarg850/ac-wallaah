@@ -11,6 +11,7 @@ import {
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { format } from 'date-fns';
 
 const ServiceRequestForm = () => {
   const [formData, setFormData] = useState({
@@ -155,12 +156,16 @@ const ServiceRequestForm = () => {
               onChange={(newValue) => {
                 setFormData((prev) => ({
                   ...prev,
-                  preferred_date: newValue,
+                  preferred_date: newValue ? format(newValue, 'yyyy-MM-dd') : null,
                 }));
               }}
-              renderInput={(params) => (
-                <TextField {...params} fullWidth sx={{ mt: 2 }} required />
-              )}
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  margin: "normal",
+                  required: true
+                }
+              }}
               minDate={new Date()}
             />
           </LocalizationProvider>
